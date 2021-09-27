@@ -29,8 +29,28 @@
     $$
     这样的结果说明，在探究$\phi(x)$的特性时，自然基向量并没有比随机向量更好解释它，因此神经网络可能不是通过坐标（cooridinates）来分解不同因素的作用。
 
-- 同时，当前的许多研究都认为，在输入和输出之间堆积更多的非线性层是为了获得input space上的non-local generalization prior，即如果训练数据在input space的某个区域内没有出现过，那么输出层就会对这个区域的信息给予很小的关注度，也就是会得到很小的概率值。
+###4 Blind Spots in Neural Networks
 
+- 当前的许多研究都认为，在输入和输出之间堆积更多的非线性层是为了获得input space上的non-local generalization prior，即如果训练数据在input space的某个区域内没有出现过，那么输出层就会对这个区域的信息给予很小的关注度，也就是会得到很小的概率值。
 - 这样的结果就表示，local generalization应该是work的，即对于足够小的$\epsilon>0$，一个训练集中的图片$x$，$x+r$如果满足条件$||r||<\epsilon$，那么$x+r$有很大的概率模型会将其分到正确的类别当中。这种特性也可以被称为“平滑性”。
-
 - 但是本文发现，这种平滑性是不成立的，给予原图一个非常微小的改变，就可以让模型对其的分类产生非常大的偏差。
+- 本文也提到他们所提出的优化方法和hard-negative mining方法有异曲同工之妙。hard-negative mining是指找到那些模型本应被给予高概率值但是却给予低概率值的样本，利用他们调整训练数据集的数据分布，再次训练模型。
+
+#### 4.1 Formal description
+
+首先介绍基本符号，$f:R^m \rightarrow\{1... k\}$是一个将图片分类的分类器，并且其有一个连续的损失函数$loss_f:R^m \times \{1...k\} \rightarrow R^+$​。$l$为目标类别。我们的优化目标即为
+$$
+Minimize\ ||r||_2 \ subject\ to: \\
+f(x+r)=l \\
+x+r \in [0,1]^m
+$$
+由于直接进行求解非常困难，因此作者采用了box-constrained L-BFGS算法来近似。总结说来，就是进行如下的优化问题：
+$$
+Minimize\ c|r|+loss_f(x+r,l)\ subject\ to:\\
+f(x) \neq l\\
+f(x+r)=l\\
+x+r \in [0,1]^m
+$$
+
+#### 4.2 Experimental results
+

@@ -54,3 +54,63 @@ $$
 
 #### 4.2 Experimental results
 
+- 通过上述优化目标，作者经过测试发现，对抗样本是普适的，而不仅仅是某个模型因为过拟合导致的缺陷。作者测试了不同的网络类型（MNIST，QuocNet，AlexNet等），同一模型不同的超参数，模型完全相同但是训练集不同三大场景，发现同样的对抗样本都能够对他们造成很大的影响，佐证了这一观点。
+- 同时，将这些对抗样本加入模型的训练集可以增强原来模型的泛化性。也有相关的实验进行佐证。
+- 不过作者也提到，只有对于每一层的输出分别输出对抗样本，并利用该对抗样本训练前面的所有层，才能达到比较好的效果。每一层有自己的对抗样本训练集，同时训练过程采用原始样本和对抗样本交替训练的方式。
+- 高层（higher layers）的对抗样本比低层（input or lower layers）的对抗样本对于模型的训练效果带来的提升要显著的大。
+- cross-model的实验结果如下所示。![Screen Shot 2021-09-27 at 16.53.13](/Users/mac/Documents/Github-Local_Repo/Paper_Notes/Pics/Screen Shot 2021-09-27 at 16.53.13.png)
+
+总体的结论是就算模型训练使用了不同的超参数，对抗样本的攻击依然十分有效。
+
+- cross-training-set的实验结果如下所示。	![Screen Shot 2021-09-27 at 17.13.58](/Users/mac/Documents/Github-Local_Repo/Paper_Notes/Pics/Screen Shot 2021-09-27 at 17.13.58.png)
+
+总体结论就是即使使用完全不同的数据集进行训练，对抗样本仍然有效，不过成功率也有了明显的下降。
+
+#### 4.3 Spectral Analysis of Unstability
+
+这一小节主要是介绍如何衡量和控制模型的稳定性（stability）。
+
+- 从数学上来说，如果我们用$\phi(x)$来表示一个K层神经网络对于图片x的输出（各层参数为W），那么就有
+    $$
+    \phi(x)=\phi_K(\phi_{K-1}(...\phi_1(x;W_1);W_2)...;W_K)
+    $$
+    则$\phi(x)$的不稳定性可以用每一层的利普希茨常数（Lipschitz constant）来定义，具体表达即为
+    $$
+    \forall x, r,\ ||\phi_k(x;W_k)-\phi_k(x+r;W_k)|| \le L_k||r||
+    $$
+    整个网络就满足$||\phi(x)-\phi(x+r)||\le L||r||$，其中$L=\prod_{k=1}^KL_k$。
+
+- 一个half-rectified layer的定义是$\phi_k(x;W_k,b_k)=max(0,W_kx+b_k)$。令$||W||$表示W的operator norm（即W中数值最大的那一维的数值，是个singular）。记$\rho(x)=max(0,x)$，显然我们可以得到$||\rho(x)-\rho(x+r)\le ||r||$。因此，对于所有的x和r，我们有
+    $$
+    ||\phi_k(x;W_k)-\phi_k(x+r;W_k)||=||max(0,W_kx+b_k)-max(0,W_k(x+r)+b_k)||\\ \le||W_kr||\le||W_k||\ ||r||
+    $$
+    因此$L_k\le||W_k||$。
+
+- 如果$\phi(x)$是一个max-pooling层，那么也满足性质
+    $$
+    \forall x, r,\ ||\phi_k(x)-\phi_k(x+r)|| \le ||r||
+    $$
+    因为其雅各比（Jacobian）是对输入坐标子集的一种投影，因此不会扩张梯度。
+
+- 如果$\phi(x)$是一个对比度归一化层，即
+    $$
+    \phi(x)=\frac{x}{(\epsilon+||x||^2)^\gamma}
+    $$
+    那么我们可以证明
+    $$
+    \forall x, r,\ ||\phi_k(x)-\phi_k(x+r)|| \le \epsilon^{-\gamma}||r||, \ for \ \gamma \in[0.5,1]
+    $$
+
+- 上面的计算主要是基于全联接网络（FC）而言，如果对于卷积神经网络，我们同样可以计算出相关上界，只不过过程较为复杂，现在我还没有完全弄懂。相关解释如下：![Screen Shot 2021-09-28 at 11.31.45](/Users/mac/Documents/Github-Local_Repo/Paper_Notes/Pics/Screen Shot 2021-09-28 at 11.31.45.png)
+
+- 通过上面的数学分析和之前的实验结果，本文发现更大的bounds并不一定导致对抗样本的出现，但是较小的bounds可以保证对抗样本不会出现。这可能意味着通过对参数进行regularization，惩罚较高的Lipschitz常数，可能会提高网络的泛化性和安全性。
+
+### 5 Discussions
+
+本文的贡献主要有以下几点。
+
+- 作者证明了深度神经网络具有反直觉的一些特性，分别体现在单个节点所表示的语义信息和语义信息不连续两个方面。
+- 对抗样本的存在显然与网络的泛化能力存在矛盾，泛化能力越强，则对抗样本应该越难出现。
+- 一种可能的解释是对抗样本所涉及的input space概率非常低，以至于在训练集中基本很难出现；然而它们又非常的稠密（就像有理数无理数），因此可以在几乎任何一个测试集中被构造出来。
+- 本文也没有完全弄懂对抗样本出现的频率，这有待后续的研究继续深入。
+

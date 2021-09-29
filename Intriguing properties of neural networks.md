@@ -58,11 +58,11 @@ $$
 - 同时，将这些对抗样本加入模型的训练集可以增强原来模型的泛化性。也有相关的实验进行佐证。
 - 不过作者也提到，只有对于每一层的输出分别输出对抗样本，并利用该对抗样本训练前面的所有层，才能达到比较好的效果。每一层有自己的对抗样本训练集，同时训练过程采用原始样本和对抗样本交替训练的方式。
 - 高层（higher layers）的对抗样本比低层（input or lower layers）的对抗样本对于模型的训练效果带来的提升要显著的大。
-- cross-model的实验结果如下所示。![Screen Shot 2021-09-27 at 16.53.13](/Users/mac/Documents/Github-Local_Repo/Paper_Notes/Pics/Screen Shot 2021-09-27 at 16.53.13.png)
+- cross-model的实验结果如下所示。![Screen Shot 2021-09-27 at 16.53.13](Pics/Screen Shot 2021-09-27 at 16.53.13.png)
 
 总体的结论是就算模型训练使用了不同的超参数，对抗样本的攻击依然十分有效。
 
-- cross-training-set的实验结果如下所示。	![Screen Shot 2021-09-27 at 17.13.58](/Users/mac/Documents/Github-Local_Repo/Paper_Notes/Pics/Screen Shot 2021-09-27 at 17.13.58.png)
+- cross-training-set的实验结果如下所示。	![Screen Shot 2021-09-27 at 17.13.58](Pics/Screen Shot 2021-09-27 at 17.13.58.png)
 
 总体结论就是即使使用完全不同的数据集进行训练，对抗样本仍然有效，不过成功率也有了明显的下降。
 
@@ -101,7 +101,7 @@ $$
     \forall x, r,\ ||\phi_k(x)-\phi_k(x+r)|| \le \epsilon^{-\gamma}||r||, \ for \ \gamma \in[0.5,1]
     $$
 
-- 上面的计算主要是基于全联接网络（FC）而言，如果对于卷积神经网络，我们同样可以计算出相关上界，只不过过程较为复杂，现在我还没有完全弄懂。相关解释如下：![Screen Shot 2021-09-28 at 11.31.45](/Users/mac/Documents/Github-Local_Repo/Paper_Notes/Pics/Screen Shot 2021-09-28 at 11.31.45.png)
+- 上面的计算主要是基于全联接网络（FC）而言，如果对于卷积神经网络，我们同样可以计算出相关上界，只不过过程较为复杂，现在我还没有完全弄懂。相关解释如下：![Screen Shot 2021-09-28 at 11.31.45](Pics/Screen Shot 2021-09-28 at 11.31.45.png)
 
 - 通过上面的数学分析和之前的实验结果，本文发现更大的bounds并不一定导致对抗样本的出现，但是较小的bounds可以保证对抗样本不会出现。这可能意味着通过对参数进行regularization，惩罚较高的Lipschitz常数，可能会提高网络的泛化性和安全性。
 

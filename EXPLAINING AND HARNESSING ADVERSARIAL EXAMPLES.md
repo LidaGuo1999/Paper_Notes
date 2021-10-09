@@ -34,7 +34,7 @@
   $$
   \eta=\epsilon sign(\nabla_xJ(\theta,x,y))
   $$
-  所需要的梯度根据BP反传就可以快速地计算。
+  所需要的梯度根据BP反传就可以快速地计算。在梯度方向上添加扰动，可以最快速地让模型对攻击样本给出错误的答案，因为这个方向上Loss的增加是最快的。
 
 - 实验的结果也非常喜人，该方法可以快速地构造对抗样本，并且让模型对错误分类给予很高的置信度。![](Pics/屏幕截图 2021-10-08 171141.png)
 
@@ -42,5 +42,5 @@
 
 ### 5 Adversarial Training of Linear Models Versus Weight Decay
 
-- 
+- 作者使用Logistic Regression作为示例，演示如何生成对抗样本。
 

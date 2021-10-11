@@ -32,7 +32,7 @@
 
 - 作者所提出的构建对抗样本的方法可以被称作“fast gradient sign methos”。具体来讲，我们令$\theta$为模型的参数，$x$为模型的输入，$y$为模型训练的真实标签（对于非监督学习也可以没有），$J(\theta,x,y)$​为损失函数。则所添加给输入的扰动即为：
   $$
-  \eta=\epsilon sign(\nabla_xJ(\theta,x,y))
+  \eta=\epsilon {\rm sign}(\nabla_xJ(\theta,x,y))
   $$
   所需要的梯度根据BP反传就可以快速地计算。在梯度方向上添加扰动，可以最快速地让模型对攻击样本给出错误的答案，因为这个方向上Loss的增加是最快的。
 
@@ -40,7 +40,44 @@
 
 - 作者认为这样的实验结果从一个侧面证明了对抗样本能够攻击成功的原因是由于线性（linearity）。作者在实验中也发现将输入$x$朝着梯度下降的方向旋转一个很小的角度也可以产生对抗样本。
 
-### 5 Adversarial Training of Linear Models Versus Weight Decay
+### 5 Adversarial Training of Linear Models Versus Weight Decay（这一段公式没搞懂）
 
 - 作者使用Logistic Regression作为示例，演示如何生成对抗样本。
+
+### 6 Adversarial training of Deep Networks
+
+- 1989年Hornik等人提出的universal approximator theorem已经证明具有一个隐藏层的神经网络可以以任何精度表现任何函数，只要隐藏层的维度足够大。
+
+- 2014年Szegedy等人的论文发现利用原始样本和对抗样本交替训练模型，模型能够被更好地正则化，鲁棒性更高。不过由于需要根据L-BFGS方法（论文中提出的方法）来生成对抗样本的成本过高，因此利用对抗样本训练模型还没有证明其有超越利用dropout来正则化神经网络的能力。
+
+- 本文作者提出利用fast gradient sign method来快速构造有效的正则项：
+  $$
+  \tilde{J}(\theta,x,y)=\alpha J(\theta,x,y)+(1-\alpha)J(\theta,x+\epsilon {\rm sign} (\nabla_x J(\theta,x,y))
+  $$
+  这样的正则项可以理解为不断地使用对抗样本来正则化模型，且正则的强度和方向不断随着当前的模型变化。
+
+- 作者在实验中发现虽然validation set error很快就平滑了，但是adversarial validation set error其实还在下降，所以作者在adversarial validation set error上使用了early stopping来训练模型。最终的结果（0.782%的错误率）略微强于2014年Srivastava等人提出的的带dropout的fine-tuning DBMs（0.79%的错误率）。
+
+- 经过adversarial training的模型有了更好的鲁棒性，并且抵挡对抗样本袭击的能力具有普适性（transferable），即对其他模型生成的对抗样本也有一定的抵挡能力。不过，当模型无法抵挡时，它给出预测的confidence还依旧是很高的，平均值达到了81.4%。同时作者发现使用adversarial training的模型的权重（weights）在训练时变化更小，且可解释性更高。![](Pics/屏幕截图 2021-10-10 155136.png)
+
+- 那有人会说能不能在满足$||\eta||_\infty <\epsilon$的条件下随意添加噪声来正则化模型呢？作者认为是不行的。即均值和协方差均为0的noise对于帮助模型抵抗对抗样本的攻击毫无作用。我们可以将adversarial training看作是从整体的noise样本中找到最难的那些，用这些最难的（即模型本身最容易分错的样本）去训练模型才能提高模型的鲁棒性。
+- 在2014年Szegedy等人的论文中，对隐藏层进行对抗扰动最能提升模型的鲁棒性。但是在本文中，作者使用fast gradient sign method，发现直接对输入进行扰动效果最好。作者认为只有当模型有能力去抵抗对抗样本（也就是模型有能力表示任何函数）时这样的adversarial training才有用。这也就暗示我们如果在最后一层隐藏层进行对抗扰动，由于模型的最后一层基本是linear-sigmoid或linear-softmax层，不满足universal approximator theorem，因此无法达到预期的效果。
+
+### 7 Different Kinds of Model Capacity
+
+- 我们觉得对抗样本“反直觉”可能是因为我们生活在三维世界，对更高维的世界没有什么概念。在高维空间中，每个维度的一点点小改变可能就会造成非常大的影响。
+
+- 作者举例RBF神经网络，这是一个只有对很确定的（在$\mu$邻域内）点才给出肯定预测的模型，对于没见过的或者不确定的点给予的置信度很低。
+  $$
+  p(y=1|x)={\rm exp}((x-\mu)^\top \beta(x-\mu))
+  $$
+  这样的RBF神经网络对于对抗样本有天生的免疫力，因为它们对于没看到过的样本的confidence本身就很低。
+
+- 然而，RBF units对一些tranformations不具有变换不变性，因此泛化性能不是很好。linear units具有高recall低precision的特点，因为它们对于某个特定方向的input都会做出反应；RBF units则具有低recall高precision的特点，因为它们只对某一小块区域内的点做出positive预测。作者想尝试融合这两者的特点，但是在实验中发现很难，这样的融合模型使用SGD训练时在训练集上的错误率都很高。
+
+### 8 Why do Adversarial Examples Generalize?
+
+- 对抗样本中一个神奇的现象就是它的泛化性很强，一种模型所生成的对抗样本对很多其他模型也具有攻击效果，并且这些模型还都会将对抗样本错分为同样的类别。因此作者认为这样的现象说明不能用无理数和有理数的关系来类比对抗样本，因为无理数只会出现在离散的、固定的精确位置。
+- 从线性的角度看，对抗样本的空间其实很广泛，只需要$\eta$和梯度点乘为正，并且$\epsilon$足够大即可。通过实验也证明了对抗样本在空间中连续出现，而不只是离散的点。这样的现象可以解释为什么对抗样本数量这么多，也解释了为什么对抗样本能够同时攻击多种模型。
+- 作者认为不同模型对同一对抗样本错分为同一类别主要是因为机器学习算法本身就具有泛化性，所以其实都趋向于一个同样的线性分类器。实验也证明模型的线性行为是导致跨模型泛化性能的一个主要原因。
 

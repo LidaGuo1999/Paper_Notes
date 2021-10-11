@@ -81,3 +81,36 @@
 - 从线性的角度看，对抗样本的空间其实很广泛，只需要$\eta$和梯度点乘为正，并且$\epsilon$足够大即可。通过实验也证明了对抗样本在空间中连续出现，而不只是离散的点。这样的现象可以解释为什么对抗样本数量这么多，也解释了为什么对抗样本能够同时攻击多种模型。
 - 作者认为不同模型对同一对抗样本错分为同一类别主要是因为机器学习算法本身就具有泛化性，所以其实都趋向于一个同样的线性分类器。实验也证明模型的线性行为是导致跨模型泛化性能的一个主要原因。
 
+### 9 Alternative Hypotheses
+
+作者对于对抗样本的出现原因给出了另外两种猜测：
+
+- generative training本身可以给训练过程提供更多的限制。举了2013年Goodfellow提出的MP-DBM作为例子。（没看懂）
+- 单个模型会有strange quirks，所以利用多个模型的平均（也就是emsemble）可以用于对抗对抗样本。不过作者的实验证明emsemble的效果也基本没有。
+
+### 10 Summary and Discussion
+
+- 对抗样本可以被解释为高维空间中点乘所带来的属性，是模型过于线性所造成的结果，而不是过于非线性。
+- 对抗样本在不同模型中的泛化性可以被解释为对模型的权重向量（weight vectors）高度相似的对抗扰动（adversarial perturbations being highly aligned with the weight vectors of a model），并且不同的模型在同样的任务中学习到了相似的函数。
+- 对抗扰动成功的关键是方向，而不是样本空间中某个specific的点或区域。即对抗样本不能用无理数与有理数的关系进行类比。
+- 因为对抗扰动的方向起主要作用，所以对抗扰动在不同的clean examples中也是可以泛化的。
+- 本文提出一系列快速生成对抗样本的方法。
+- 本文证明了adversarial training可以用于正则化模型，并且一定程度上比dropout效果更好。同时也证明$L^1$weight decay和添加噪声的正则化方法效果都不及adversarial training。
+- 易于训练的模型也易于被对抗样本攻击。
+- 线性模型本身基本没有抵抗对抗样本的能力，只有那些具有隐藏层的结构（即满足universal approximator theorem）才应该被训练如何抵抗对抗样本攻击。
+- RBF神经网络能够抵抗对抗样本的攻击。
+- 对输入分布（input distribution）进行学习的模型也无法抵抗对抗样本的攻击。
+- Ensemble也不能抵抗对抗样本的攻击。
+
+作者总结，认为对抗样本的存在说明我们所提出的模型并不是真正学习到我们想让他们学习的知识，并且对于输入控件中未出现的区域过于自信（overly confident）。也许是我们所使用的模型家族本身就有先天的缺陷（intrinsically flawed），训练方法的简易带来的代价就是模型也很容易被攻击。这启示之后的研究工作可以关注如何改变训练优化方法，让模型的行为在局部区域内更稳定（more locally stable）。
+
+### Appendix A: Rubbish Class Examples
+
+- rubbish class example指的是训练集中人类不会将该样本分类为任何类别的那些样本（即人类认为无法分辨）。训练者当然希望模型不要将这些样本分类为某个类别，因为这显然是不正确的。
+- 为了提高模型对rubbish class example的抵抗程度，Nguyen等人于2014年提出增加一个新的类别用以专门对它们分类。最近rubbish class也被称为fooling images（主要在计算机视觉领域）。
+- 以前认为这些rubbish class很难找到，但是本文中作者已经证明线性模型会对远离训练数据分布的一些样本给予高置信度的错误分类，因此只需要生成一些远离训练数据分布，并且有较大的norms的样本即可。即rubbish examples其实是广泛存在且易于生成的。
+- 较浅的线性模型对rubbish class examples没有抵抗力，RBF网络则有抵抗力。
+- 对于如何生成让模型错分为指定类别的fooling images，上述的方法对于有些类别有效，对于另一些类别却完全没有作用。为了解决这个问题，作者提出对随机高斯样本$x$添加一项$\epsilon \nabla_xp(y=i|x)$即可。实验结果也显示这样的方法效果很好，并且图像确实是fooling images而不是属于某种类别的images。![](Pics/屏幕截图 2021-10-11 170424.png)
+- 但是利用fooling images去训练模型并不能够像adversarial examples一样降低模型在测试集上的错误率，即不能帮助模型提高性能。
+- 因此，这说明随机选取的一个input都很有可能被模型错误地分类，因此模型实际上只学习到了训练数据周围很小范围内的相关信息（a very thin manifold encompassing the training data）。
+

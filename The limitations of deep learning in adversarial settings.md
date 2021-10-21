@@ -64,3 +64,38 @@ $$
 - 输入的微小扰动可以给输出带来剧烈的变化；
 - 不是输入空间中的所有区域都能简单地找到对抗样本，只有梯度变化较剧烈的部分可以；
 - 利用forward derivative方法可以缩小对抗样本的寻找空间；
+
+#### B. Generalizing to Feedforward Deep Neural Networks
+
+该部分作者将A中的方法泛化至任何DNN，只要是一个非循环的、且激活函数可导的DNN即可。具体的字母标识如下图所示。![](Pics/屏幕截图 2021-10-19 110518.png)
+
+构造对抗样本的算法则如下所示：![](Pics/屏幕截图 2021-10-19 110600.png)
+
+该算法主要有三个基本步骤：
+
+- 计算Forward Derivative（前向导数）。如A中所示，前向导数其实就是所学函数的雅各比矩阵，并且其计算的梯度和BP反传十分类似，不过有两个明显不同。第一，前向导数是直接利用网络的输出求导，而BP反传是利用损失函数求导；第二，前向导数是对输入直接求偏导，BP反传则是对模型的参数求偏导。前向导数的意义就是试图寻找输入中的哪些分量会对模型的输出产生较大的影响。
+
+  我们现在考虑一个$(i,j)\in [1..M]\times [1..N]$对，$i$代表输入的第$i$个分量，$j$代表输出的第$j$个分量。那么每个隐藏层对$x_i$求导可得：
+  $$
+  \begin{aligned} \frac {\partial \mathbf{H}_k(X)}{\partial x_i} &=\left[\frac{\partial f_{k,p}(\mathbf{W}_{k,p} \cdot \mathbf{H}_{k-1}+b_{k,p})}{\partial x_i}\right]_{p\in 1..m_k} \\ & = \left(\mathbf{W}_{k,p} \cdot \frac{\partial \mathbf{H}_{k-1}}{\partial x_i} \right) \times \frac{\partial f_{k,p}}{\partial x_i}(\mathbf{W}_{k,p} \cdot \mathbf{H}_{k-1}+b_{k,p})  \end{aligned}
+  $$
+  其中$\mathbf{H}_k$是第$k$个隐藏层的输出向量，$f_{k,p}$是第k层第$p$个神经元的激活函数。依此类推直到最后的输出层。
+
+  根据我们之前定义的攻击器能力，我们知道上述式子所有的参数，除了$\frac{\partial \mathbf{H}_n}{\partial x_i}$，而这个值需要从输入层开始一层层地向前计算（这也是前向导数得名由来），直到最终的输出层。
+
+- 计算Adversarial Saliency Maps（下简称ASM）。ASM是一种problem-specific的对抗攻击方法，根据不同的任务会有不同的定义形式。下面将以分类问题作为例子介绍。
+
+  在分类问题中，攻击器想让模型将样本$X$错分为类别$t\neq label(X)$。为了达到这一目的，模型$\mathbf{F}$输出目标类别$t$的概率就应该增加，而输出其他类别$j\neq t$的概率就应该下降，直到$t=\mathop{\rm arg\  max}\limits_{j}\mathbf{F}_j(X)$。
+
+  为了达到这一目的，我们可以对输入计算ASM，即$S(X,t)$：
+  $$
+  S(X,t)[i]=\begin{cases} 0\  {\rm if}\ \frac{\partial \mathbf{F}_t(X)}{\partial X_i}<0\ {\rm or}\ \sum_{j\neq t}\frac{\partial \mathbf{F}_j(X)}{\partial X_i}>0 \\ \left(\frac{\partial \mathbf{F}_t(X)}{\partial X_i}\right)\left|\sum_{j\neq t}\frac{\partial \mathbf{F}_j(X)}{\partial X_i}\right|\ {\rm otherwise} \end{cases}
+  $$
+  由上述公式我们易得，ASM中取值较高的分量对应的就是输入分量中既能提升target class概率又能降低其他classes概率的分量。因此攻击器增加这些输入分量的值，最终就可以让原模型将样本错分为target class。将ASM可视化出来即为：![](Pics/屏幕截图 2021-10-21 113023.png)
+
+  当然我们也可以利用前向导数构造其他的ASM，比如找到输入中应该被降低的分量有哪些。
+
+- 对样本进行扰动。当我们利用ASM确定了需要扰动的输入分量后，就可以对其进行扰动。需要保证扰动不能超过我们所设置的maximum distortion，即算法中的$\Upsilon$。
+
+### 4 Application of the Approach
+

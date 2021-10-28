@@ -47,3 +47,18 @@ $$
 
 在实际的操作过程中，由于最终样本会落在分类面上，而我们希望其落在分类面的另一侧，因此让$\hat{r}$乘上一个略微比1大的常数$1+\eta$，其中$\eta \ll 1$。
 
+### 3. DeepFool for multiclass classifiers
+
+对于多分类问题，函数调整为$f:\mathbb{R}^n \rarr \mathbb{R}^c$，分类器调整为$\hat{k}(x)=\mathop{\arg \max}\limits_{k}f_k(x)$，其中$f_k(x)$为函数$f$对于第$k$类的输出。
+
+#### 3.1 Affine multiclass classifier
+
+首先需要解释一下什么是one-vs-all分类器。对于有n个类别的多分类器而言，one-vs-all其实就是由n个二分类器组合在一起的分类器，第i个二分类器负责判断样本是否符合第i类。一般我们常见的多分类器都是one-vs-all分类器。
+
+此时有$f(x)=\mathbf{W}^\top x+\mathbf{b}$，其中$\mathbf{W}$是矩阵，而$\mathbf{b}$是向量（因为相当于n个二分类器组合在一起）。因此，最小扰动即被重写为：
+$$
+\mathop{\arg \min}\limits_r\ ||r||_2 \\
+{\rm s.t.}\ \exist k:w_k^\top(x_0+r)+b_k \ge w_{\hat{k}(x_0)}^\top(x_0+r)+b_{\hat{k}(x_0)}
+$$
+即被分为其他某一类别所需的最小代价。
+
